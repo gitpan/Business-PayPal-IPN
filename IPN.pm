@@ -1,19 +1,19 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.14 2003/05/03 08:27:27 sherzodr Exp $
+# $Id: IPN.pm,v 1.18 2003/08/19 07:47:08 sherzodr Exp $
 
 use strict;
 use Carp 'croak';
 use vars qw($VERSION $GTW $AUTOLOAD $SUPPORTEDV $errstr);
 
 # Supported version of PayPal's IPN API
-$SUPPORTEDV = '1.4';
+$SUPPORTEDV = '1.5';
 
 # Gateway to PayPal's validation server as of this writing
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
 # Revision of the library
-$VERSION  = '1.93';
+$VERSION  = '1.94';
 
 # Preloaded methods go here.
 
@@ -301,7 +301,7 @@ __END__
 
 =head1 NAME
 
-Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
+Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.5
 
 =head1 SYNOPSIS
 
@@ -315,15 +315,15 @@ Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
 
 =head1 ABSTRACT
 
-Business::PayPal::IPN implements PayPal IPN version 1.4. It validates transactions 
+Business::PayPal::IPN implements PayPal IPN version 1.5. It validates transactions 
 and gives you means to get notified of payments to your PayPal account. If you don't already
 know what PayPal IPN is this library may not be for you. Consult with respective manuals 
-provided by PayPal.com.
+provided by PayPal.com, http://www.paypal.com/.
 
 =head2 WARNING
 
-I<$Revision: 1.14 $> of Business::PayPal::IPN supports version 1.4 of the API. This was the latest
-version as of Friday, July 18, 2003. Supported version number is available in 
+I<$Revision: 1.18 $> of Business::PayPal::IPN supports version 1.5 of the API. This was the latest
+version as of Tuesday, August 19, 2003. Supported version number is available in 
 C<$Business::PayPal::IPN::SUPPORTEDV> global variable. If PayPal introduces new response variables,
 Business::PayPal::IPN automatically supports those variables thanks to AUTOLOAD. For any further
 updates, you can contact me or send me a patch.
@@ -542,7 +542,7 @@ change. But it comes handy while testing your application through a PayPal simul
 =item *
 
 $Business::PayPal::IPN::SUPPORTEDV - supported version of PayPal's IPN API.
-Default value is "1.4". You can modify it before creating ipn object (as long as you
+Default value is "1.5". You can modify it before creating ipn object (as long as you
 know what you are doing. If not don't touch it!)
 
 =item *
@@ -584,6 +584,6 @@ GUARANTEE OF MERCHANTABILITY NOR FITNESS FOR A PARTICULAR PURPOSE. USE IT AT YOU
 
 =head1 REVISION
 
-$Revision: 1.14 $
+$Revision: 1.18 $
 
 =cut

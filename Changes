@@ -1,6 +1,9 @@
 Revision history for Perl extension Business::PayPal::IPN.
 
-$Id: Changes,v 1.7 2003/05/03 08:27:27 sherzodr Exp $
+$Id: Changes,v 1.8 2003/08/19 07:47:08 sherzodr Exp $
+
+1.94, Tuedays, August 19, 2003
+  - $SUPPORTEDV is not 1.5.
 
 1.92, Saturday, May 03, 2003
   - methods no longer simply return false, but distinguish between
