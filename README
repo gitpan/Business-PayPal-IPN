@@ -23,7 +23,7 @@ DESCRIPTION
 
   WARNING
 
-    $Revision: 1.3 $ of Business::PayPal::IPN supports version 1.4 of the
+    $Revision: 1.4 $ of Business::PayPal::IPN supports version 1.4 of the
     API. This was the latest version as of Wednesday, January 22, 2003.
     Supported version number is available in
     $Business::PayPal::IPN::SUPPORTEDV global variable.
@@ -59,7 +59,7 @@ PAYPAL IPN OVERVIEW
       if ( $ipn->completed() ) {
         # means the funds are already in our paypal account. But we should
         # still check against duplicates transaction ids to ensure we're
-        # no logging the same transaction twice. 
+        # not logging the same transaction twice. 
 
       } elsif ( $ipn->pending() ) {
         # the payment was made to your account, but its status is still pending
@@ -77,8 +77,8 @@ PREREQUISITES
     *   LWP - to make HTTP requests
 
     *   Crypt::SSLeay - to enable LWP perform https (SSL) requests. If for
-        any reason you are not be able to install Crypt::SSLeay, you will
-        need to update $Business::PayPal::IPN::GTW to proper, non-ssl URL.
+        any reason you are not able to install Crypt::SSLeay, you will need
+        to update $Business::PayPal::IPN::GTW to proper, non-ssl URL.
 
 METHODS
     *   "new()" - constructor. Validates the transaction and returns IPN
@@ -92,10 +92,11 @@ METHODS
 
     *   "response()" - returns HTTP::Response object, which is the content
         returned while verifying transaction through PayPal. You normally
-        never need this method. In case you do for any reason, here it is
+        never need this method. In case you do for any reason, here it is.
 
-    *   "user_agent()" - returns user agent object used by PayPal to verify
-        the transaction with PayPal.
+    *   "user_agent()" - returns user agent object used by the library to
+        verify the transaction. Name of the agent is
+        "Business::PayPal::IPN/#.# (libwww-perl/#.##)".
 
     Business::PayPal::IPN supports all the variables supported by PayPal IPN
     independent of its version. To access the value of any variable, use the
@@ -116,15 +117,27 @@ METHODS
     Manual provided by PayPal Developer Network. You can find the link at
     the bottom of http://www.paypal.com.
 
-    In addition to the above scheme, the library also provides "status()"
-    method, which is a shortcut to "payment_status()"
+    In addition to the above scheme, the library also provides convenience
+    methods such as:
+
+    *   "status()" - which is a shortcut to "payment_status()"
+
+    *   "failed()" - returns true if "payment_status" is "Failed".
+
+    *   "completed()" - returns true if "payment_status" is "Completed".
+
+    *   "pending()" - returns true if "payment_status" is "Pending". Return
+        value is also the string that explains why the payment is pending.
+
+        "denied()" - returns true if "payment_status" is "Denied".
 
 VARIABLES
     Following global variables are available:
 
     *   $Business::PayPal::IPN::GTW - gateway url to PayPal's Web Script.
         Default is "https://www.paypal.com/cgi-bin/webscr", which you may
-        not want to change.
+        not want to change. But it comes handy while testing your
+        application through a PayPal simulator.
 
     *   $Business::PayPal::IPN::SUPPORTEDV - supported version of PayPal's
         IPN API. Default value is "1.4". You can modify it before creating
@@ -136,12 +149,19 @@ VARIABLES
 AUTHOR
     Sherzod B. Ruzmetov <sherzodr@cpan.org>
 
+CREDITS
+    Thanks to Brian Grossman for his patches.
+
 COPYRIGHT AND LICENSE
     Copyright 2003 by Sherzod B. Ruzmetov.
 
     This library is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
 
+    THIS LIBRARY IS PROVIDED WITH THE USEFULNESS IN MIND, BUT WITHOUT EVEN
+    IMPLIED GUARANTEE OF MERCHANTABILITY NOR FITNESS FOR A PARTICULAR
+    PURPOSE. USE IT AT YOUR OWN RISK.
+
 REVISION
-    $Revision: 1.3 $
+    $Revision: 1.4 $
 

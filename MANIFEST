@@ -1,6 +1,8 @@
 Changes
 IPN.pm
+MANIFEST			This list of files
+MANIFEST.SKIP
 Makefile.PL
-MANIFEST
 README
+patches/brian-grossman.patch
 test.pl

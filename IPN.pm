@@ -1,6 +1,6 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.7 2003/03/04 01:50:39 sherzodr Exp $
+# $Id: IPN.pm,v 1.8 2003/03/04 15:06:06 sherzodr Exp $
 
 use strict;
 use Carp 'croak';
@@ -14,7 +14,7 @@ $SUPPORTEDV = '1.4';
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
 # Revision of the library
-($VERSION)  = '$Revision: 1.7 $' =~ m/Revision:\s*(\S+)/;
+($VERSION)  = '$Revision: 1.8 $' =~ m/Revision:\s*(\S+)/;
 
 # Preloaded methods go here.
 
@@ -63,8 +63,8 @@ sub new {
   $self->_init()          or return undef;
   $self->_validate_txn()  or return undef;
 
-  unless ( $self->{notify_version} eq $SUPPORTEDV ) {
-    croak "This library supports $SUPPORTEDV of PayPal IPN. Required support is $self->{notify_version}";
+  unless ( $self->{_PAYPAL_VARS}{notify_version} eq $SUPPORTEDV ) {
+    croak "This library supports $SUPPORTEDV of PayPal IPN. Required support is $self->{_PAYPAL_VARS}{notify_version}";
   }
   return $self;
 }
@@ -74,7 +74,7 @@ sub new {
 
 
 # initializes class object. Mainly, takes all query parameters presumably
-# that came from PayPal, and assigns them as
+# that came from PayPal, and assigns them as object attributes
 sub _init {
   my $self = shift;
 
@@ -95,7 +95,7 @@ sub _init {
 
 
 # validates the transaction by re-submitting it to the PayPal server
-# and reading the responce.
+# and reading the response.
 sub _validate_txn {
   my $self = shift;
 
@@ -164,7 +164,7 @@ sub query {
 
 
 
-# returns already created response method
+# returns already created response object
 sub response {
   my $self = shift;
 
@@ -188,9 +188,8 @@ sub user_agent {
   require LWP::UserAgent;
   
   my $ua = LWP::UserAgent->new();
-  $ua->agent("Business::PayPal::IPN/$VERSION");
+  $ua->agent( sprintf("Business::PayPal::IPN/%s (%s)", $VERSION, $ua->agent) );
   $self->{ua} = $ua;
-
   return $self->user_agent();
 }
 
@@ -202,7 +201,7 @@ sub user_agent {
 # The same as payment_status(), but shorter :-).
 sub status {
   my $self = shift;
-  return $self->{payment_status};
+  return $self->{_PAYPAL_VARS}{payment_status};
 }
 
 
@@ -226,7 +225,7 @@ sub pending {
   my $self = shift;
 
   if ( $self->status() eq 'Pending' ) {
-    return $self->{pending_reason};
+    return $self->{_PAYPAL_VARS}{pending_reason};
   }
   return undef;
 }
@@ -275,11 +274,10 @@ sub dump {
       croak "Couldn't lock $file: $!";
     }
     print FH $d->Dump();
-    close(FH) or croak "Object couldn't be dumpted into $file: $!";
+    close(FH) or croak "Object couldn't be dumped into $file: $!";
   }
 
   return $d->Dump();
-
 }
 
 
@@ -319,7 +317,7 @@ Consult with respective manuals provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.7 $ of Business::PayPal::IPN supports version 1.4 of the API.
+$Revision: 1.8 $ of Business::PayPal::IPN supports version 1.4 of the API.
 This was the latest version as of Wednesday, January 22, 2003. 
 Supported version number is available in $Business::PayPal::IPN::SUPPORTEDV
 global variable.
@@ -354,7 +352,7 @@ complexity into this compact form:
   if ( $ipn->completed() ) {
     # means the funds are already in our paypal account. But we should
     # still check against duplicates transaction ids to ensure we're
-    # no logging the same transaction twice. 
+    # not logging the same transaction twice. 
 
   } elsif ( $ipn->pending() ) {
     # the payment was made to your account, but its status is still pending
@@ -379,7 +377,7 @@ LWP - to make HTTP requests
 =item *
 
 Crypt::SSLeay - to enable LWP perform https (SSL) requests. If for any reason you
-are not be able to install Crypt::SSLeay, you will need to update 
+are not able to install Crypt::SSLeay, you will need to update 
 $Business::PayPal::IPN::GTW to proper, non-ssl URL.
 
 =back
@@ -404,12 +402,12 @@ query object
 
 C<response()> - returns HTTP::Response object, which is the content
 returned while verifying transaction through PayPal. You normally never need
-this method. In case you do for any reason, here it is
+this method. In case you do for any reason, here it is.
 
 =item *
 
-C<user_agent()> - returns user agent object used by PayPal to verify the transaction
-with PayPal.
+C<user_agent()> - returns user agent object used by the library to verify the transaction.
+Name of the agent is C<Business::PayPal::IPN/#.# (libwww-perl/#.##)>.
 
 =back
 
@@ -432,8 +430,31 @@ and so on. For the list of all the available variables, consult IPN Manual
 provided by PayPal Developer Network. You can find the link at the bottom
 of http://www.paypal.com.
 
-In addition to the above scheme, the library also provides C<status()>
-method, which is a shortcut to C<payment_status()>
+In addition to the above scheme, the library also provides convenience methods
+such as:
+
+=over 4
+
+=item *
+
+C<status()> - which is a shortcut to C<payment_status()>
+
+=item *
+
+C<failed()> - returns true if C<payment_status> is "Failed". 
+
+=item *
+
+C<completed()> - returns true if C<payment_status> is "Completed".
+
+=item *
+
+C<pending()> - returns true if C<payment_status> is "Pending". Return
+value is also the string that explains why the payment is pending.
+
+C<denied()> - returns true if C<payment_status> is "Denied".
+
+=back
 
 =head1 VARIABLES
 
@@ -445,7 +466,7 @@ Following global variables are available:
 
 $Business::PayPal::IPN::GTW - gateway url to PayPal's Web Script. Default
 is "https://www.paypal.com/cgi-bin/webscr", which you may not want to 
-change.
+change. But it comes handy while testing your application through a PayPal simulator.
 
 =item *
 
@@ -463,6 +484,10 @@ $Business::PayPal::IPN::VERSION - version of the library
 
 Sherzod B. Ruzmetov E<lt>sherzodr@cpan.orgE<gt>
 
+=head1 CREDITS
+
+Thanks to B<Brian Grossman> for his patches.
+
 =head1 COPYRIGHT AND LICENSE
 
 Copyright 2003 by Sherzod B. Ruzmetov.
@@ -470,8 +495,11 @@ Copyright 2003 by Sherzod B. Ruzmetov.
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
+THIS LIBRARY IS PROVIDED WITH THE USEFULNESS IN MIND, BUT WITHOUT EVEN IMPLIED 
+GUARANTEE OF MERCHANTABILITY NOR FITNESS FOR A PARTICULAR PURPOSE. USE IT AT YOUR OWN RISK.
+
 =head1 REVISION
 
-$Revision: 1.7 $
+$Revision: 1.8 $
 
 =cut
