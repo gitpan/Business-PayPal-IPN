@@ -23,14 +23,14 @@ DESCRIPTION
 
   WARNING
 
-    $Revision: 1.2 $ of Business::PayPal::IPN supports version 1.4 of the
+    $Revision: 1.3 $ of Business::PayPal::IPN supports version 1.4 of the
     API. This was the latest version as of Wednesday, January 22, 2003.
     Supported version number is available in
     $Business::PayPal::IPN::SUPPORTEDV global variable.
 
     Note: If PayPal introduces new response variables, Business::PayPal::IPN
     automatically supports those variables thanks to AUTOLOAD. For any
-    further updates, you can contact me.
+    further updates, you can contact me or send me a patch.
 
 PAYPAL IPN OVERVIEW
     As soon as you receive payment to your PayPal account, PayPal posts the
@@ -76,9 +76,27 @@ PAYPAL IPN OVERVIEW
 PREREQUISITES
     *   LWP - to make HTTP requests
 
-    *   Crypt::SSLeay - to enable LWP perform https (SSL) requests
+    *   Crypt::SSLeay - to enable LWP perform https (SSL) requests. If for
+        any reason you are not be able to install Crypt::SSLeay, you will
+        need to update $Business::PayPal::IPN::GTW to proper, non-ssl URL.
 
 METHODS
+    *   "new()" - constructor. Validates the transaction and returns IPN
+        object if everything was successful. Optionally you may pass it
+        query and ua options. query denotes the CGI object to be used. ua
+        denotes the user agent object. If ua is missing, it will use
+        LWP::UserAgent by default.
+
+    *   "query()" - can also be accessed via "cgi()" alias, returns
+        respective query object
+
+    *   "response()" - returns HTTP::Response object, which is the content
+        returned while verifying transaction through PayPal. You normally
+        never need this method. In case you do for any reason, here it is
+
+    *   "user_agent()" - returns user agent object used by PayPal to verify
+        the transaction with PayPal.
+
     Business::PayPal::IPN supports all the variables supported by PayPal IPN
     independent of its version. To access the value of any variable, use the
     corresponding method name. For example, if you want to get the first
@@ -97,6 +115,9 @@ METHODS
     and so on. For the list of all the available variables, consult IPN
     Manual provided by PayPal Developer Network. You can find the link at
     the bottom of http://www.paypal.com.
+
+    In addition to the above scheme, the library also provides "status()"
+    method, which is a shortcut to "payment_status()"
 
 VARIABLES
     Following global variables are available:
@@ -122,5 +143,5 @@ COPYRIGHT AND LICENSE
     under the same terms as Perl itself.
 
 REVISION
-    $Revision: 1.2 $
+    $Revision: 1.3 $
 

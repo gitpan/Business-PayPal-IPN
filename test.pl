@@ -18,4 +18,3 @@ ok(1); # If we made it this far, we're ok.
 #my $obj = new Business::PayPal::IPN() or die Business::PayPal::IPN->error();
 
 
-

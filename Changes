@@ -1,7 +1,13 @@
 Revision history for Perl extension Business::PayPal::IPN.
 
-$Id: Changes,v 1.2 2003/01/23 02:54:27 sherzodr Exp $
+$Id: Changes,v 1.3 2003/03/04 01:50:39 sherzodr Exp $
 
+1.7, Monday, March 03, 2003
+  - new() supports "query" and "ua" parameters
+  - response() method introduced, which returns respective
+    HTTP::Response object
+  - cgi() and query() methods document.
+  - better AUTOLOADing
 
 1.5, Wednesday, January 22, 2003
 	- minor documentation corrections

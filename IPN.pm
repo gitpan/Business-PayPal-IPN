@@ -1,54 +1,62 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.5 2003/01/23 02:54:27 sherzodr Exp $
+# $Id: IPN.pm,v 1.7 2003/03/04 01:50:39 sherzodr Exp $
 
 use strict;
-use warnings;
-use LWP::UserAgent;
-use Crypt::SSLeay;
 use Carp 'croak';
-use CGI qw/-oldstyle_urls/;
-
+use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $GTW $AUTOLOAD $SUPPORTEDV $errstr);
 
-($VERSION)  = '$Revision: 1.5 $' =~ m/Revision:\s*(\S+)/;
+# Supported version of PayPal's IPN API
 $SUPPORTEDV = '1.4';
+
+# Gateway to PayPal's validation server as of this writing
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
+
+# Revision of the library
+($VERSION)  = '$Revision: 1.7 $' =~ m/Revision:\s*(\S+)/;
 
 # Preloaded methods go here.
 
-
-
+# Allows access to PayPal IPN's all the variables as method calls
 sub AUTOLOAD {
   my $self = shift;
 
   unless ( ref($self) ) {
     croak "Method $AUTOLOAD is not a class method. You should call it on the object";
   }
-
   my ($field) = $AUTOLOAD =~ m/([^:]+)$/;
-  if ( exists $self->{$field} ) {
-    return $self->{$field};
+  if ( exists $self->{_PAYPAL_VARS}->{$field} ) {
+    no strict 'refs';
+    # Following line is not quite required to get it working,
+    # but will speed-up subsequent accesses to the same method
+    *{$AUTOLOAD} = sub { return $_[0]->{_PAYPAL_VARS}->{$field} };
+    return $self->{_PAYPAL_VARS}->{$field};
   }
-
   croak "Attempt to call undefined method $AUTOLOAD";
 }
 
 
 
 
-
+# So that AUTOLOAD does not look for destructor. Expensive!
 sub DESTROY { }
 
 
 
 
 
+# constructor method. Initializes and returns Business::PayPal::IPN object
 sub new {
   my $class = shift;
   $class = ref($class) || $class;
 
-  my $self = { @_ };
+  my $self = { 
+    _PAYPAL_VARS => {},
+    query        => undef,
+    ua           => undef,
+    @_,
+  };
 
   bless $self, $class;
 
@@ -58,85 +66,53 @@ sub new {
   unless ( $self->{notify_version} eq $SUPPORTEDV ) {
     croak "This library supports $SUPPORTEDV of PayPal IPN. Required support is $self->{notify_version}";
   }
-
   return $self;
 }
 
 
 
 
-sub cgi {
-  my $self = shift;
 
-  if ( defined $self->{_CGI_OBJ} ) {
-    return $self->{_CGI_OBJ};
-  }
-
-  my $cgi = CGI->new();
-  $self->{_CGI_OBJ} = $cgi;
-
-  return $self->cgi();
-}
-
-
-
-
-
+# initializes class object. Mainly, takes all query parameters presumably
+# that came from PayPal, and assigns them as
 sub _init {
   my $self = shift;
 
   my $cgi = $self->cgi() or croak "Couldn't create CGI object";
-
   my $i = 0;
   for ( $cgi->param() ) {
-    $self->{$_} = $cgi->param($_);
+    $self->{_PAYPAL_VARS}->{$_} = $cgi->param($_);
     $i++;
   }
-
   unless ( $i > 3 ) {
     $errstr = "Insufficient content from the invoker: '" . $cgi->query_string() . "'";
     return undef;
   }
-
   return 1;
 }
 
 
-sub user_agent {
-  my $self = shift;
-
-  if ( defined $self->{_UA_OBJ} ) {
-    return $self->{_UA_OBJ};
-  }
-
-  my $ua = LWP::UserAgent->new();
-  $ua->agent("Business::PayPal::IPN/$VERSION");
-  $self->{_UA_OBJ} = $ua;
-
-  return $self->user_agent();
-}
 
 
-
-
-
+# validates the transaction by re-submitting it to the PayPal server
+# and reading the responce.
 sub _validate_txn {
   my $self = shift;
 
   my $cgi = $self->cgi();
+  my $ua  = $self->user_agent();
 
-  $cgi->param(cmd => "_notify-validate");
+  # Adding a new field according to PayPal IPN manual
+  $self->{_PAYPAL_VARS}->{cmd} = "_notify-validate";
 
-  my $form_ref = {};
-  for ( $cgi->param() ) {
-    $form_ref->{$_} = $cgi->param($_) || "";
-  }
+  # making a POST request to the server with all the variables
+  my $responce  = $ua->post( $GTW, $self->{_PAYPAL_VARS} );
 
-  my $ua        = $self->user_agent();
-  my $responce  = $ua->post($GTW, $form_ref);
-
+  # caching the response object in case anyone needs it
+  $self->{response} = $responce;
+  
   if ( $responce->is_error() ) {
-    $errstr = "Couldn't connec to '$GTW': " . $responce->status_line();
+    $errstr = "Couldn't connect to '$GTW': " . $responce->status_line();
     return undef;
   }
 
@@ -148,7 +124,7 @@ sub _validate_txn {
   }
 
   # if we came this far, something is really wrong here:
-  $errstr = "Vague responce: " . substr($responce->content(), 0, 255);
+  $errstr = "Vague response: " . substr($responce->content(), 0, 255);
   return undef;
 }
 
@@ -156,44 +132,155 @@ sub _validate_txn {
 
 
 
-sub status {
+
+
+
+
+
+
+# returns standard CGI object
+sub cgi {
   my $self = shift;
 
+  if ( defined $self->{query} ) {
+    return $self->{query};
+  }
+
+  require CGI;
+
+  my $cgi = CGI->new();
+  $self->{query} = $cgi;
+
+  return $self->cgi();
+}
+
+
+# alias to cgi()
+sub query {
+  my $self = shift;
+
+  return $self->cgi(@_);
+}
+
+
+
+# returns already created response method
+sub response {
+  my $self = shift;
+
+  if ( defined $self->{response} ) {
+    return $self->{response};
+  }
+
+  return undef;
+}
+
+
+
+# returns user agent object
+sub user_agent {
+  my $self = shift;
+
+  if ( defined $self->{ua} ) {
+    return $self->{ua};
+  }
+
+  require LWP::UserAgent;
+  
+  my $ua = LWP::UserAgent->new();
+  $ua->agent("Business::PayPal::IPN/$VERSION");
+  $self->{ua} = $ua;
+
+  return $self->user_agent();
+}
+
+
+
+
+
+
+# The same as payment_status(), but shorter :-).
+sub status {
+  my $self = shift;
   return $self->{payment_status};
 }
 
 
+# returns true if the payment status is completed
 sub completed {
   my $self = shift;
-  return ($self->{payment_status} eq 'Completed');
+  return ($self->status() eq 'Completed');
 }
 
 
+# returns true if the payment status is failed
 sub failed {
   my $self = shift;
-  return ($self->{payment_status} eq 'Failed');
+  return ($self->status() eq 'Failed');
 }
 
+
+# returns the reason for pending if the payment status
+# is pending.
 sub pending {
   my $self = shift;
 
-  if ( $self->{payment_status} eq 'Pending' ) {
+  if ( $self->status() eq 'Pending' ) {
     return $self->{pending_reason};
   }
   return undef;
 }
 
+
+# returns true if payment status is denied
 sub denied {
   my $self = shift;
 
-  return ($self->{payment_status} eq 'Denied');
+  return ($self->status() eq 'Denied');
 }
 
 
+
+# internally used to assign error messages to $errstr.
+# Public interface should use it without any arguments
+# to get the error message
 sub error {
+  my ($self, $msg) = @_;
+
+  if ( defined $msg ) {
+    $errstr = $msg;
+  }
+
   return $errstr;
 }
 
+
+
+
+
+# for debugging purposes only. Returns the whole object
+# as a perl data structure using Data::Dumper
+sub dump {
+  my ($self, $file, $indent) = @_;
+
+  $indent ||= 1;
+
+  require Data::Dumper;
+  my $d = new Data::Dumper([$self], [ref($self)]);
+  $d->Indent( $indent );
+
+  if ( defined $file ) {
+    sysopen(FH, $file, O_WRONLY|O_CREAT|O_EXCL) or croak "Couldn't dump into $file: $!";
+    unless ( flock(FH, LOCK_EX) ) {
+      croak "Couldn't lock $file: $!";
+    }
+    print FH $d->Dump();
+    close(FH) or croak "Object couldn't be dumpted into $file: $!";
+  }
+
+  return $d->Dump();
+
+}
 
 
 
@@ -232,14 +319,14 @@ Consult with respective manuals provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.5 $ of Business::PayPal::IPN supports version 1.4 of the API.
+$Revision: 1.7 $ of Business::PayPal::IPN supports version 1.4 of the API.
 This was the latest version as of Wednesday, January 22, 2003. 
 Supported version number is available in $Business::PayPal::IPN::SUPPORTEDV
 global variable.
 
 Note: If PayPal introduces new response variables, Business::PayPal::IPN
 automatically supports those variables thanks to AUTOLOAD. For any further
-updates, you can contact me.
+updates, you can contact me or send me a patch.
 
 =head1 PAYPAL IPN OVERVIEW
 
@@ -291,11 +378,40 @@ LWP - to make HTTP requests
 
 =item *
 
-Crypt::SSLeay - to enable LWP perform https (SSL) requests
+Crypt::SSLeay - to enable LWP perform https (SSL) requests. If for any reason you
+are not be able to install Crypt::SSLeay, you will need to update 
+$Business::PayPal::IPN::GTW to proper, non-ssl URL.
 
 =back
 
 =head1 METHODS
+
+=over 4
+
+=item *
+
+C<new()> - constructor. Validates the transaction and returns IPN object
+if everything was successful. Optionally you may pass it B<query> and B<ua>
+options. B<query> denotes the CGI object to be used. B<ua> denotes the
+user agent object. If B<ua> is missing, it will use LWP::UserAgent by default.
+
+=item *
+
+C<query()> - can also be accessed via C<cgi()> alias, returns respective
+query object
+
+=item *
+
+C<response()> - returns HTTP::Response object, which is the content
+returned while verifying transaction through PayPal. You normally never need
+this method. In case you do for any reason, here it is
+
+=item *
+
+C<user_agent()> - returns user agent object used by PayPal to verify the transaction
+with PayPal.
+
+=back
 
 Business::PayPal::IPN supports all the variables supported by PayPal IPN 
 independent of its version. To access the value of any variable, 
@@ -315,6 +431,9 @@ To get payment type ('payment_type' variable)
 and so on. For the list of all the available variables, consult IPN Manual
 provided by PayPal Developer Network. You can find the link at the bottom
 of http://www.paypal.com.
+
+In addition to the above scheme, the library also provides C<status()>
+method, which is a shortcut to C<payment_status()>
 
 =head1 VARIABLES
 
@@ -353,6 +472,6 @@ it under the same terms as Perl itself.
 
 =head1 REVISION
 
-$Revision: 1.5 $
+$Revision: 1.7 $
 
 =cut
