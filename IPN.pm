@@ -1,6 +1,6 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.11 2003/03/11 11:28:58 sherzodr Exp $
+# $Id: IPN.pm,v 1.13 2003/04/22 19:30:44 sherzodr Exp $
 
 use strict;
 use Carp 'croak';
@@ -13,7 +13,7 @@ $SUPPORTEDV = '1.4';
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
 # Revision of the library
-$VERSION  = '1.9';
+$VERSION  = '1.91';
 
 # Preloaded methods go here.
 
@@ -80,7 +80,7 @@ sub _init {
   my $cgi = $self->cgi() or croak "Couldn't create CGI object";
   map {
     $self->{_PAYPAL_VARS}->{$_} = $cgi->param($_)
-  } $cgi->param();
+  } ($cgi->param());
 
   unless ( scalar( keys %{$self->{_PAYPAL_VARS}} > 3 ) ) {
     $errstr = "Insufficient content from the invoker:\n" . $self->dump();
@@ -306,7 +306,6 @@ Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
     # do something with it
   }
 
-
 =head1 DESCRIPTION
 
 Business::PayPal::IPN implements PayPal IPN version 1.4.
@@ -318,7 +317,7 @@ Consult with respective manuals provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.11 $ of Business::PayPal::IPN supports version 1.4 of the API.
+$Revision: 1.13 $ of Business::PayPal::IPN supports version 1.4 of the API.
 This was the latest version as of Wednesday, January 22, 2003. 
 Supported version number is available in $Business::PayPal::IPN::SUPPORTEDV
 global variable.
@@ -422,15 +421,15 @@ independent of its version. To access the value of any variable,
 use the corresponding method name. For example, if you want to get the 
 first name of the user who made the payment ('first_name' variable):
 
-  my $fname = $ipn->first_name();
+  my $fname = $ipn->first_name()
 
-To get the transaction id ('txn_id' variable):
+To get the transaction id ('txn_id' variable)
 
-  my $txn = $ipn->txn_id();
+  my $txn = $ipn->txn_id()
 
 To get payment type ('payment_type' variable)
 
-  $type = $ipn->payment_type();
+  $type = $ipn->payment_type()
 
 and so on. For the list of all the available variables, consult IPN Manual
 provided by PayPal Developer Network. You can find the link at the bottom
@@ -457,6 +456,8 @@ C<completed()> - returns true if C<payment_status> is "Completed".
 
 C<pending()> - returns true if C<payment_status> is "Pending". Return
 value is also the string that explains why the payment is pending.
+
+=item *
 
 C<denied()> - returns true if C<payment_status> is "Denied".
 
@@ -506,6 +507,6 @@ GUARANTEE OF MERCHANTABILITY NOR FITNESS FOR A PARTICULAR PURPOSE. USE IT AT YOU
 
 =head1 REVISION
 
-$Revision: 1.11 $
+$Revision: 1.13 $
 
 =cut

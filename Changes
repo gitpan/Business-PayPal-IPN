@@ -1,6 +1,9 @@
 Revision history for Perl extension Business::PayPal::IPN.
 
-$Id: Changes,v 1.5 2003/03/11 11:27:13 sherzodr Exp $
+$Id: Changes,v 1.6 2003/04/22 19:30:44 sherzodr Exp $
+
+1.91, Tuesday, April 22, 2003
+  - POD fix
 
 1.9, Tuesday, March 11, 2003
   - vars() method introduced
