@@ -1,6 +1,6 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.13 2003/04/22 19:30:44 sherzodr Exp $
+# $Id: IPN.pm,v 1.14 2003/05/03 08:27:27 sherzodr Exp $
 
 use strict;
 use Carp 'croak';
@@ -13,7 +13,7 @@ $SUPPORTEDV = '1.4';
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
 # Revision of the library
-$VERSION  = '1.91';
+$VERSION  = '1.92';
 
 # Preloaded methods go here.
 
@@ -25,14 +25,14 @@ sub AUTOLOAD {
     croak "Method $AUTOLOAD is not a class method. You should call it on the object";
   }
   my ($field) = $AUTOLOAD =~ m/([^:]+)$/;
-  if ( exists $self->{_PAYPAL_VARS}->{$field} ) {
-    no strict 'refs';
-    # Following line is not quite required to get it working,
-    # but will speed-up subsequent accesses to the same method
-    *{$AUTOLOAD} = sub { return $_[0]->{_PAYPAL_VARS}->{$field} };
-    return $self->{_PAYPAL_VARS}->{$field};
+  unless ( exists $self->{_PAYPAL_VARS}->{$field} ) {
+    return undef;
   }
-  croak "Attempt to call undefined method $AUTOLOAD";
+  no strict 'refs';
+  # Following line is not quite required to get it working,
+  # but will speed-up subsequent accesses to the same method
+  *{$AUTOLOAD} = sub { return $_[0]->{_PAYPAL_VARS}->{$field} };
+  return $self->{_PAYPAL_VARS}->{$field};
 }
 
 
@@ -62,9 +62,6 @@ sub new {
   $self->_init()          or return undef;
   $self->_validate_txn()  or return undef;
 
-  unless ( $self->{_PAYPAL_VARS}{notify_version} eq $SUPPORTEDV ) {
-    croak "This library supports $SUPPORTEDV of PayPal IPN. Required support is $self->{_PAYPAL_VARS}{notify_version}";
-  }
   return $self;
 }
 
@@ -212,14 +209,24 @@ sub status {
 # returns true if the payment status is completed
 sub completed {
   my $self = shift;
-  return ($self->status() eq 'Completed');
+
+  unless ( defined $self->status() ) {
+    return undef;
+  }
+  ($self->status() eq 'Completed') and return 1;
+  return 0;
 }
 
 
 # returns true if the payment status is failed
 sub failed {
   my $self = shift;
-  return ($self->status() eq 'Failed');
+
+  unless ( defined $self->status() ) {
+    return undef;
+  }
+  ($self->status() eq 'Failed') and return 1;
+  return 0;
 }
 
 
@@ -227,11 +234,13 @@ sub failed {
 # is pending.
 sub pending {
   my $self = shift;
-
+  unless ( defined $self->status() ) {
+    return undef;
+  }
   if ( $self->status() eq 'Pending' ) {
     return $self->{_PAYPAL_VARS}{pending_reason};
   }
-  return undef;
+  return 0;
 }
 
 
@@ -239,7 +248,11 @@ sub pending {
 sub denied {
   my $self = shift;
 
-  return ($self->status() eq 'Denied');
+  unless ( defined $self->status() ) {
+    return undef;
+  }
+  ($self->status() eq 'Denied') and return 1;
+  return 0;
 }
 
 
@@ -253,7 +266,6 @@ sub error {
   if ( defined $msg ) {
     $errstr = $msg;
   }
-
   return $errstr;
 }
 
@@ -277,7 +289,6 @@ sub dump {
     print FH $d->Dump();
     close(FH) or croak "Object couldn't be dumped into $file: $!";
   }
-
   return $d->Dump();
 }
 
@@ -306,53 +317,48 @@ Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
     # do something with it
   }
 
-=head1 DESCRIPTION
+=head1 ABSTRACT
 
-Business::PayPal::IPN implements PayPal IPN version 1.4.
-It validates transactions and gives you means to get notified
-of payments to your PayPal account. If you don't already
-know what PayPal IPN is this library may not be for you ;-).
-Consult with respective manuals provided by PayPal.com.
-
+Business::PayPal::IPN implements PayPal IPN version 1.4. It validates transactions 
+and gives you means to get notified of payments to your PayPal account. If you don't already
+know what PayPal IPN is this library may not be for you. Consult with respective manuals 
+provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.13 $ of Business::PayPal::IPN supports version 1.4 of the API.
-This was the latest version as of Wednesday, January 22, 2003. 
-Supported version number is available in $Business::PayPal::IPN::SUPPORTEDV
-global variable.
-
-Note: If PayPal introduces new response variables, Business::PayPal::IPN
-automatically supports those variables thanks to AUTOLOAD. For any further
+$Revision: 1.14 $ of Business::PayPal::IPN supports version 1.4 of the API. This was the latest
+version as of Saturday, May 03, 2003. Supported version number is available in 
+$Business::PayPal::IPN::SUPPORTEDV global variable. If PayPal introduces new response variables,
+Business::PayPal::IPN automatically supports those variables thanks to AUTOLOAD. For any further
 updates, you can contact me or send me a patch.
 
 =head1 PAYPAL IPN OVERVIEW
 
-As soon as you receive payment to your PayPal account, PayPal
-posts the transaction details to your specified URL, which you either
-configure in your PayPal preferences, or in your HTML forms' "notify_url"
-hidden field.
+As soon as you receive payment to your PayPal account, PayPal posts the transaction details to
+your specified URL, which you either configure in your PayPal preferences, or in your HTML forms'
+"notify_url" hidden field.
 
-When the payment details are received from, supposedly, PayPal server,
-your application should check with the PayPal server to make sure
-it is indeed a valid transaction, and that PayPal is aware of it.
-This can be achieved by re-submitting the transaction details back to
+When the payment details are received from, supposedly, PayPal server, your application should 
+check with the PayPal server to make sure it is indeed a valid transaction, and that PayPal is aware
+of it. This can be achieved by re-submitting the transaction details back to 
 https://www.paypal.com/cgi-bin/webscr and check the integrity of the data.
 
-If the transaction is valid, PayPal will respond to you with a single string
-"VERIFIED", and you can proceed safely. If the transaction is not valid,
-you will receive "INVALID", and you can log the request for further investigation.
+If the transaction is valid, PayPal will respond to you with a single string "VERIFIED", 
+and you can proceed safely. If the transaction is not valid, you will receive "INVALID", and you can
+log the request for further investigation. 
 
-Business::PayPal::IPN is the library which encapsulates all the above
-complexity into this compact form:
+So why this verification step is necessary? Because it is very easy for others to simulate a PayPal
+transaction. If you do not take this step, your program will be tricked into thinking it was a valid
+transaction, and may act the way you wouldn't want it to act. So you take extra step and check directly
+with PayPal and see if such a transaction really happened
+
+Business::PayPal::IPN is the library which encapsulates all the above complexity into this compact form:
 
   my $ipn = new Business::PayPal::IPN() or die Business::PayPal::IPN->error();
 
   # if we come this far, we're guaranteed it was a valid transaction.
   if ( $ipn->completed() ) {
-    # means the funds are already in our paypal account. But we should
-    # still check against duplicates transaction ids to ensure we're
-    # not logging the same transaction twice. 
+    # means the funds are already in our paypal account.
 
   } elsif ( $ipn->pending() ) {
     # the payment was made to your account, but its status is still pending
@@ -377,8 +383,8 @@ LWP - to make HTTP requests
 =item *
 
 Crypt::SSLeay - to enable LWP perform https (SSL) requests. If for any reason you
-are not able to install Crypt::SSLeay, you will need to update 
-$Business::PayPal::IPN::GTW to proper, non-ssl URL.
+are not able to install Crypt::SSLeay, you will need to update $Business::PayPal::IPN::GTW to
+proper, non-ssl URL.
 
 =back
 
@@ -388,26 +394,33 @@ $Business::PayPal::IPN::GTW to proper, non-ssl URL.
 
 =item *
 
-C<new()> - constructor. Validates the transaction and returns IPN object
-if everything was successful. Optionally you may pass it B<query> and B<ua>
-options. B<query> denotes the CGI object to be used. B<ua> denotes the
-user agent object. If B<ua> is missing, it will use LWP::UserAgent by default.
+C<new()> - constructor. Validates the transaction and returns IPN object. Optionally you may pass 
+it B<query> and B<ua> options. B<query> denotes the CGI object to be used. B<ua> denotes the
+user agent object. If B<ua> is missing, it will use LWP::UserAgent by default. If the transaction
+could not be validated, it will return undef and you should check the error() method for a more
+detailed error string:
+
+  $ipn = new Business::PayPal::IPN() or die Business::PayPal::IPN->error();
 
 =item *
 
-C<vars()> - returns all the returned PayPal variables and their respective
-values in the form of a hash.
+C<vars()> - returns all the returned PayPal variables and their respective values in the 
+form of a hash.
+
+  my $paypal = $ipn->vars();
+  if ( $paypal->{payment_status} eq 'Completed' ) {
+    print "Payment was made successfully!";
+  }
 
 =item *
 
-C<query()> - can also be accessed via C<cgi()> alias, returns respective
-query object
+C<query()> - can also be accessed via C<cgi()> alias, returns respective query object
 
 =item *
 
-C<response()> - returns HTTP::Response object, which is the content
-returned while verifying transaction through PayPal. You normally never need
-this method. In case you do for any reason, here it is.
+C<response()> - returns HTTP::Response object, which is the response returned while verifying
+transaction through PayPal. You normally never need this method. In case you do for any reason,
+here it is.
 
 =item *
 
@@ -416,10 +429,9 @@ Name of the agent is C<Business::PayPal::IPN/#.# (libwww-perl/#.##)>.
 
 =back
 
-Business::PayPal::IPN supports all the variables supported by PayPal IPN 
-independent of its version. To access the value of any variable, 
-use the corresponding method name. For example, if you want to get the 
-first name of the user who made the payment ('first_name' variable):
+Business::PayPal::IPN supports all the variables supported by PayPal IPN independent of its 
+version. To access the value of any variable, use the corresponding method name. For example, 
+if you want to get the first name of the user who made the payment ('first_name' variable):
 
   my $fname = $ipn->first_name()
 
@@ -431,9 +443,8 @@ To get payment type ('payment_type' variable)
 
   $type = $ipn->payment_type()
 
-and so on. For the list of all the available variables, consult IPN Manual
-provided by PayPal Developer Network. You can find the link at the bottom
-of http://www.paypal.com.
+and so on. For the list of all the available variables, consult IPN Manual provided by PayPal
+Developer Network. You can find the link at the bottom of http://www.paypal.com.
 
 In addition to the above scheme, the library also provides convenience methods
 such as:
@@ -446,11 +457,11 @@ C<status()> - which is a shortcut to C<payment_status()>
 
 =item *
 
-C<failed()> - returns true if C<payment_status> is "Failed". 
+C<completed()> - returns true if C<payment_status> is "Completed".
 
 =item *
 
-C<completed()> - returns true if C<payment_status> is "Completed".
+C<failed()> - returns true if C<payment_status> is "Failed". 
 
 =item *
 
@@ -462,6 +473,63 @@ value is also the string that explains why the payment is pending.
 C<denied()> - returns true if C<payment_status> is "Denied".
 
 =back
+
+=head1 RETURN VALUES OF METHODS
+
+Methods can return 1, 0 or undefined as well as any other true value. The distinction
+between 0 (which is false) and undefined (which is also false) is important:
+
+  $ipn->completed eq undef and print "Not relevant for this transaction type";
+  $ipn->completed == 1 and print "Transaction was completed";
+  $ipn->completed == 0 and print "Transaction was NOT completed";
+
+In other words, methods return undef indicating this variable is not relevant for
+this transaction type ("txn_type"). A good example for such transactions is "subscr_signup"
+transaction, that do not return any "payment_status" nor "txn_id" variables. Methods return
+0 (zero) indicating failure. They return 1 (one) or any other true value indicating success.
+
+=head1 DEBUGGING
+
+If for any reason your PayPal IPN solutions don't work as expected, you have no other
+choice but debugging the process. Although it sounds complex, it really is not.All you need
+to do is get your IPN script to dump Business::PayPal::IPN object into a file and investigate
+to see what exactly is happening. For this reason, we provide C<dump()> method which does
+just that:
+
+=over 4
+
+=item * 
+
+C<dump([$filename] [,$indent])> - for dumping Business::PayPal::IPN object.
+If used without any arguments, simply returns the object as Perl data structure.
+If filename is passed as the first argument, object is dumped into the file.
+The second argument, if present, should be a value between 1 and 3 to indicate how well
+indented the dump file should be. For debugging purposes, I believe 2 is enough, but
+go ahead and try out for yourself to compare differences.
+
+=back
+
+  Note that the object is dumped only once to the same file. So after investigating the dump,
+  you may need to remove the file or dump to another file instead.
+
+Interpreting the dump file may seem tricky, since it is relatively big file. But you don't
+need to understand everything in it. Simply look for the attribute called "_PAYPAL_VARS".
+It is a hashref that keeps all the variables returned from PayPal server. These are also
+the methods that are available through Business::PayPal::IPN object.
+
+You can also investigate the content of "response" attribute. It holds the HTTP::Responce
+object. Look for the "_content" attribute of this object. This is what was returned from
+PayPal.com in response to your request. Ideally, this should hold "VERIFIED". "INVALID"
+is also explainable though :-).
+
+Before you do any "dumping" around, include the following lines on top of your IPN script
+if you haven't done so already. This will ensure that when PayPal.com calls your IPN script, 
+all the warnings and error messages, if any, will be saved in this file.
+
+  use CGI::Carp 'carpout';
+  BEGIN {
+    open(LOG, '>>path/to/error.log') && carpout(\*LOG);
+  }
 
 =head1 VARIABLES
 
@@ -507,6 +575,6 @@ GUARANTEE OF MERCHANTABILITY NOR FITNESS FOR A PARTICULAR PURPOSE. USE IT AT YOU
 
 =head1 REVISION
 
-$Revision: 1.13 $
+$Revision: 1.14 $
 
 =cut

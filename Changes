@@ -1,7 +1,15 @@
 Revision history for Perl extension Business::PayPal::IPN.
 
-$Id: Changes,v 1.6 2003/04/22 19:30:44 sherzodr Exp $
+$Id: Changes,v 1.7 2003/05/03 08:27:27 sherzodr Exp $
 
+1.92, Saturday, May 03, 2003
+  - methods no longer simply return false, but distinguish between
+    0 (zero) and undef
+  - manual updated with notes on subscription transactions as well as
+    method return values
+  - no longer checks for the value of 'notify_version'
+  - included a section on debugging
+  
 1.91, Tuesday, April 22, 2003
   - POD fix
 
