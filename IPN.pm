@@ -1,10 +1,9 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.8 2003/03/04 15:06:06 sherzodr Exp $
+# $Id: IPN.pm,v 1.11 2003/03/11 11:28:58 sherzodr Exp $
 
 use strict;
 use Carp 'croak';
-use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $GTW $AUTOLOAD $SUPPORTEDV $errstr);
 
 # Supported version of PayPal's IPN API
@@ -14,7 +13,7 @@ $SUPPORTEDV = '1.4';
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
 # Revision of the library
-($VERSION)  = '$Revision: 1.8 $' =~ m/Revision:\s*(\S+)/;
+$VERSION  = '1.9';
 
 # Preloaded methods go here.
 
@@ -79,13 +78,12 @@ sub _init {
   my $self = shift;
 
   my $cgi = $self->cgi() or croak "Couldn't create CGI object";
-  my $i = 0;
-  for ( $cgi->param() ) {
-    $self->{_PAYPAL_VARS}->{$_} = $cgi->param($_);
-    $i++;
-  }
-  unless ( $i > 3 ) {
-    $errstr = "Insufficient content from the invoker: '" . $cgi->query_string() . "'";
+  map {
+    $self->{_PAYPAL_VARS}->{$_} = $cgi->param($_)
+  } $cgi->param();
+
+  unless ( scalar( keys %{$self->{_PAYPAL_VARS}} > 3 ) ) {
+    $errstr = "Insufficient content from the invoker:\n" . $self->dump();
     return undef;
   }
   return 1;
@@ -131,6 +129,12 @@ sub _validate_txn {
 
 
 
+# returns all the PayPal's variables in the form of a hash
+sub vars {
+  my $self = shift;
+
+  return %{ $self->{_PAYPAL_VARS} };
+}
 
 
 
@@ -268,11 +272,8 @@ sub dump {
   my $d = new Data::Dumper([$self], [ref($self)]);
   $d->Indent( $indent );
 
-  if ( defined $file ) {
-    sysopen(FH, $file, O_WRONLY|O_CREAT|O_EXCL) or croak "Couldn't dump into $file: $!";
-    unless ( flock(FH, LOCK_EX) ) {
-      croak "Couldn't lock $file: $!";
-    }
+  if ( (defined $file) && (not -e $file) ) {
+    open(FH, '>' . $file) or croak "Couldn't dump into $file: $!";    
     print FH $d->Dump();
     close(FH) or croak "Object couldn't be dumped into $file: $!";
   }
@@ -317,7 +318,7 @@ Consult with respective manuals provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.8 $ of Business::PayPal::IPN supports version 1.4 of the API.
+$Revision: 1.11 $ of Business::PayPal::IPN supports version 1.4 of the API.
 This was the latest version as of Wednesday, January 22, 2003. 
 Supported version number is available in $Business::PayPal::IPN::SUPPORTEDV
 global variable.
@@ -392,6 +393,11 @@ C<new()> - constructor. Validates the transaction and returns IPN object
 if everything was successful. Optionally you may pass it B<query> and B<ua>
 options. B<query> denotes the CGI object to be used. B<ua> denotes the
 user agent object. If B<ua> is missing, it will use LWP::UserAgent by default.
+
+=item *
+
+C<vars()> - returns all the returned PayPal variables and their respective
+values in the form of a hash.
 
 =item *
 
@@ -500,6 +506,6 @@ GUARANTEE OF MERCHANTABILITY NOR FITNESS FOR A PARTICULAR PURPOSE. USE IT AT YOU
 
 =head1 REVISION
 
-$Revision: 1.8 $
+$Revision: 1.11 $
 
 =cut
