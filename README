@@ -1,35 +1,126 @@
-Business/PayPal/IPN version 0.01
-================================
+NAME
+    Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+SYNOPSIS
+      use Business::PayPal::IPN;
 
-A README file is required for CPAN modules since CPAN extracts the
-README file from a module distribution so that people browsing the
-archive can use it get an idea of the modules uses. It is usually a
-good idea to provide version information here so that people can
-decide whether fixes for the module are worth downloading.
+      my $ipn = new Business::PayPal::IPN() or die Business::PayPal::IPN->error();
 
-INSTALLATION
+      # if we came this far, you're guaranteed it went through,
+      # and the transaction took place. But now you need to check
+      # the status of the transaction, to see if it was completed
+      # or still pending
+      if ( $ipn->completed ) {
+        # do something with it
+      }
 
-To install this module type the following:
+DESCRIPTION
+    Business::PayPal::IPN implements PayPal IPN version 1.4. It validates
+    transactions and gives you means to get notified of payments to your
+    PayPal account. If you don't already know what PayPal IPN is this
+    library may not be for you ;-). Consult with respective manuals provided
+    by PayPal.com.
 
-   perl Makefile.PL
-   make
-   make test
-   make install
+  WARNING
 
-DEPENDENCIES
+    $Revision: 1.2 $ of Business::PayPal::IPN supports version 1.4 of the
+    API. This was the latest version as of Wednesday, January 22, 2003.
+    Supported version number is available in
+    $Business::PayPal::IPN::SUPPORTEDV global variable.
 
-This module requires these other modules and libraries:
+    Note: If PayPal introduces new response variables, Business::PayPal::IPN
+    automatically supports those variables thanks to AUTOLOAD. For any
+    further updates, you can contact me.
 
-  blah blah blah
+PAYPAL IPN OVERVIEW
+    As soon as you receive payment to your PayPal account, PayPal posts the
+    transaction details to your specified URL, which you either configure in
+    your PayPal preferences, or in your HTML forms' "notify_url" hidden
+    field.
 
-COPYRIGHT AND LICENCE
+    When the payment details are received from, supposedly, PayPal server,
+    your application should check with the PayPal server to make sure it is
+    indeed a valid transaction, and that PayPal is aware of it. This can be
+    achieved by re-submitting the transaction details back to
+    https://www.paypal.com/cgi-bin/webscr and check the integrity of the
+    data.
 
-Put the correct copyright and licence information here.
+    If the transaction is valid, PayPal will respond to you with a single
+    string "VERIFIED", and you can proceed safely. If the transaction is not
+    valid, you will receive "INVALID", and you can log the request for
+    further investigation.
 
-Copyright (C) 2003 A. U. Thor blah blah blah
+    Business::PayPal::IPN is the library which encapsulates all the above
+    complexity into this compact form:
+
+      my $ipn = new Business::PayPal::IPN() or die Business::PayPal::IPN->error();
+
+      # if we come this far, we're guaranteed it was a valid transaction.
+      if ( $ipn->completed() ) {
+        # means the funds are already in our paypal account. But we should
+        # still check against duplicates transaction ids to ensure we're
+        # no logging the same transaction twice. 
+
+      } elsif ( $ipn->pending() ) {
+        # the payment was made to your account, but its status is still pending
+        # $ipn->pending() also returns the reason why it is so.
+
+      } elsif ( $ipn->denied() ) {
+        # the payment denied
+
+      } elsif ( $ipn->failed() ) {
+        # the payment failed
+
+      }
+
+PREREQUISITES
+    *   LWP - to make HTTP requests
+
+    *   Crypt::SSLeay - to enable LWP perform https (SSL) requests
+
+METHODS
+    Business::PayPal::IPN supports all the variables supported by PayPal IPN
+    independent of its version. To access the value of any variable, use the
+    corresponding method name. For example, if you want to get the first
+    name of the user who made the payment ('first_name' variable):
+
+      my $fname = $ipn->first_name();
+
+    To get the transaction id ('txn_id' variable):
+
+      my $txn = $ipn->txn_id();
+
+    To get payment type ('payment_type' variable)
+
+      $type = $ipn->payment_type();
+
+    and so on. For the list of all the available variables, consult IPN
+    Manual provided by PayPal Developer Network. You can find the link at
+    the bottom of http://www.paypal.com.
+
+VARIABLES
+    Following global variables are available:
+
+    *   $Business::PayPal::IPN::GTW - gateway url to PayPal's Web Script.
+        Default is "https://www.paypal.com/cgi-bin/webscr", which you may
+        not want to change.
+
+    *   $Business::PayPal::IPN::SUPPORTEDV - supported version of PayPal's
+        IPN API. Default value is "1.4". You can modify it before creating
+        ipn object (as long as you know what you are doing. If not don't
+        touch it!)
+
+    *   $Business::PayPal::IPN::VERSION - version of the library
+
+AUTHOR
+    Sherzod B. Ruzmetov <sherzodr@cpan.org>
+
+COPYRIGHT AND LICENSE
+    Copyright 2003 by Sherzod B. Ruzmetov.
+
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+REVISION
+    $Revision: 1.2 $
 

@@ -1,6 +1,6 @@
 package Business::PayPal::IPN;
 
-# $Id: IPN.pm,v 1.4 2003/01/22 21:24:28 sherzodr Exp $
+# $Id: IPN.pm,v 1.5 2003/01/23 02:54:27 sherzodr Exp $
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use CGI qw/-oldstyle_urls/;
 
 use vars qw($VERSION $GTW $AUTOLOAD $SUPPORTEDV $errstr);
 
-($VERSION)  = '$Revision: 1.4 $' =~ m/Revision:\s*(\S+)/;
+($VERSION)  = '$Revision: 1.5 $' =~ m/Revision:\s*(\S+)/;
 $SUPPORTEDV = '1.4';
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
@@ -32,16 +32,6 @@ sub AUTOLOAD {
   }
 
   croak "Attempt to call undefined method $AUTOLOAD";
-}
-
-
-sub gtw {
-  my ($class, $arg) = @_;
-
-  if ( defined $arg ) {
-    $GTW = $arg;
-  }
-  return $GTW;
 }
 
 
@@ -120,6 +110,7 @@ sub user_agent {
   }
 
   my $ua = LWP::UserAgent->new();
+  $ua->agent("Business::PayPal::IPN/$VERSION");
   $self->{_UA_OBJ} = $ua;
 
   return $self->user_agent();
@@ -230,7 +221,7 @@ Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
   }
 
 
-=head1 ABSTRACT
+=head1 DESCRIPTION
 
 Business::PayPal::IPN implements PayPal IPN version 1.4.
 It validates transactions and gives you means to get notified
@@ -241,16 +232,16 @@ Consult with respective manuals provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.4 $ of Business::PayPal::IPN supports version 1.4 of the API.
+$Revision: 1.5 $ of Business::PayPal::IPN supports version 1.4 of the API.
 This was the latest version as of Wednesday, January 22, 2003. 
 Supported version number is available in $Business::PayPal::IPN::SUPPORTEDV
 global variable.
 
-Note: If PayPal interoduces new responce variables, Business::PayPal::IPN
-automaticly supports those variables thanks to AUTOLOAD. For any further
+Note: If PayPal introduces new response variables, Business::PayPal::IPN
+automatically supports those variables thanks to AUTOLOAD. For any further
 updates, you can contact me.
 
-=head1 DESCRIPTION
+=head1 PAYPAL IPN OVERVIEW
 
 As soon as you receive payment to your PayPal account, PayPal
 posts the transaction details to your specified URL, which you either
@@ -263,7 +254,7 @@ it is indeed a valid transaction, and that PayPal is aware of it.
 This can be achieved by re-submitting the transaction details back to
 https://www.paypal.com/cgi-bin/webscr and check the integrity of the data.
 
-If the transaction is valid, PayPal will respond to you with a singly string
+If the transaction is valid, PayPal will respond to you with a single string
 "VERIFIED", and you can proceed safely. If the transaction is not valid,
 you will receive "INVALID", and you can log the request for further investigation.
 
@@ -275,8 +266,8 @@ complexity into this compact form:
   # if we come this far, we're guaranteed it was a valid transaction.
   if ( $ipn->completed() ) {
     # means the funds are already in our paypal account. But we should
-    # still check againsts duplicates transaction ids to ensure we're
-    # no logging the same transaction twise. 
+    # still check against duplicates transaction ids to ensure we're
+    # no logging the same transaction twice. 
 
   } elsif ( $ipn->pending() ) {
     # the payment was made to your account, but its status is still pending
@@ -307,7 +298,7 @@ Crypt::SSLeay - to enable LWP perform https (SSL) requests
 =head1 METHODS
 
 Business::PayPal::IPN supports all the variables supported by PayPal IPN 
-independant of its version. To access the value of any variable, 
+independent of its version. To access the value of any variable, 
 use the corresponding method name. For example, if you want to get the 
 first name of the user who made the payment ('first_name' variable):
 
@@ -321,13 +312,13 @@ To get payment type ('payment_type' variable)
 
   $type = $ipn->payment_type();
 
-and so on. For the list of all the avaialble variables, consult IPN Manual
+and so on. For the list of all the available variables, consult IPN Manual
 provided by PayPal Developer Network. You can find the link at the bottom
 of http://www.paypal.com.
 
 =head1 VARIABLES
 
-Following global variables are avaialble:
+Following global variables are available:
 
 =over 4
 
@@ -362,6 +353,6 @@ it under the same terms as Perl itself.
 
 =head1 REVISION
 
-$Revision: 1.4 $
+$Revision: 1.5 $
 
 =cut
