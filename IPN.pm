@@ -13,7 +13,7 @@ $SUPPORTEDV = '1.4';
 $GTW        = 'https://www.paypal.com/cgi-bin/webscr';
 
 # Revision of the library
-$VERSION  = '1.92';
+$VERSION  = '1.93';
 
 # Preloaded methods go here.
 
@@ -309,12 +309,8 @@ Business::PayPal::IPN - Perl extension that implements PayPal IPN v1.4
 
   my $ipn = new Business::PayPal::IPN() or die Business::PayPal::IPN->error();
 
-  # if we came this far, you're guaranteed it went through,
-  # and the transaction took place. But now you need to check
-  # the status of the transaction, to see if it was completed
-  # or still pending
   if ( $ipn->completed ) {
-    # do something with it
+    # ...
   }
 
 =head1 ABSTRACT
@@ -326,9 +322,9 @@ provided by PayPal.com.
 
 =head2 WARNING
 
-$Revision: 1.14 $ of Business::PayPal::IPN supports version 1.4 of the API. This was the latest
-version as of Saturday, May 03, 2003. Supported version number is available in 
-$Business::PayPal::IPN::SUPPORTEDV global variable. If PayPal introduces new response variables,
+I<$Revision: 1.14 $> of Business::PayPal::IPN supports version 1.4 of the API. This was the latest
+version as of Friday, July 18, 2003. Supported version number is available in 
+C<$Business::PayPal::IPN::SUPPORTEDV> global variable. If PayPal introduces new response variables,
 Business::PayPal::IPN automatically supports those variables thanks to AUTOLOAD. For any further
 updates, you can contact me or send me a patch.
 
@@ -407,8 +403,8 @@ detailed error string:
 C<vars()> - returns all the returned PayPal variables and their respective values in the 
 form of a hash.
 
-  my $paypal = $ipn->vars();
-  if ( $paypal->{payment_status} eq 'Completed' ) {
+  my %paypal = $ipn->vars();
+  if ( $paypal{payment_status} eq 'Completed' ) {
     print "Payment was made successfully!";
   }
 
@@ -517,7 +513,7 @@ need to understand everything in it. Simply look for the attribute called "_PAYP
 It is a hashref that keeps all the variables returned from PayPal server. These are also
 the methods that are available through Business::PayPal::IPN object.
 
-You can also investigate the content of "response" attribute. It holds the HTTP::Responce
+You can also investigate the content of "response" attribute. It holds the HTTP::Response
 object. Look for the "_content" attribute of this object. This is what was returned from
 PayPal.com in response to your request. Ideally, this should hold "VERIFIED". "INVALID"
 is also explainable though :-).
@@ -561,7 +557,20 @@ Sherzod B. Ruzmetov E<lt>sherzodr@cpan.orgE<gt>
 
 =head1 CREDITS
 
-Thanks to B<Brian Grossman> for his patches.
+Following people contributed to this library with their patches and suggestions. It's very
+possible that list is not complete. Help me with it.
+
+=over 4
+
+=item B<Brian Grossman>
+
+Fixes in the source code. F<pathces/brian-grososman>.
+
+=item B<Thomas J Mather>
+
+Documentation fixes. F<patches/thomas-mather.patch>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
